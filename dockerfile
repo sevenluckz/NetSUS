@@ -1,5 +1,6 @@
 FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
+ARG TERM=Linux
 
 LABEL maintainer="https://github.com/sevenluckz/NetSUS" \
       description="JAMF NetSUS Server"
@@ -35,13 +36,27 @@ RUN apt update \
  && apt install -y software-properties-common \
                    dialog \
                    sudo \
-                   readline-common
+                   readline-common \
+                   locales \
+                   libapache2-mod-php \
+                   dbus
+
+RUN touch /usr/share/locale/locale.alias
+RUN sed -i -e 's/# \(en_US\.UTF-8 .*\)/\1/' /etc/locale.gen && \
+    locale-gen
+ENV LANG en_US.UTF-8  
+ENV LANGUAGE en_US:en  
+ENV LC_ALL en_US.UTF-8   
             
 COPY . /netsus
+
+RUN /netsus/CreateNetSUSInstaller.sh
 
 RUN sudo groupadd lpadmin
 RUN sudo groupadd sambashare
 
-RUN sudo /netsus/NetSUSLPInstaller.run --nox11 -- -y
+RUN yes | sudo /netsus/NetSUSLPInstaller.run #-- -y
 
-ENTRYPOINT ["/sbin/tini", "--"]
+#ENTRYPOINT ["/bin/bash", "--"]
+
+CMD apachectl -D FOREGROUND
