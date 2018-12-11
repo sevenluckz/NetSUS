@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+  FROM ubuntu:18.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TERM=Linux
 
@@ -39,7 +39,9 @@ RUN apt update \
                    readline-common \
                    locales \
                    libapache2-mod-php \
-                   dbus
+                   dbus \
+                   supervisor \
+                   ntp
 
 RUN touch /usr/share/locale/locale.alias
 RUN sed -i -e 's/# \(en_US\.UTF-8 .*\)/\1/' /etc/locale.gen && \
@@ -47,7 +49,12 @@ RUN sed -i -e 's/# \(en_US\.UTF-8 .*\)/\1/' /etc/locale.gen && \
 ENV LANG en_US.UTF-8  
 ENV LANGUAGE en_US:en  
 ENV LC_ALL en_US.UTF-8   
-            
+
+COPY ./docker/supervisor.conf /etc/
+COPY ./docker/supervisor/ /etc/supervisor/
+COPY ./docker/netboot.sh /opt/
+COPY ./docker/ldapproxy.sh /opt/
+copy ./docker/webapp.sh /opt/
 COPY . /netsus
 
 RUN /netsus/CreateNetSUSInstaller.sh
@@ -55,8 +62,8 @@ RUN /netsus/CreateNetSUSInstaller.sh
 RUN sudo groupadd lpadmin
 RUN sudo groupadd sambashare
 
-RUN yes | sudo /netsus/NetSUSLPInstaller.run #-- -y
+RUN yes | sudo /netsus/NetSUSLPInstaller.run -- -y
 
 #ENTRYPOINT ["/bin/bash", "--"]
 
-CMD apachectl -D FOREGROUND
+CMD supervisord -c /etc/supervisor.conf
